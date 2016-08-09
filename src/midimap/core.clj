@@ -1,34 +1,96 @@
 (ns midimap.core)
 
 
-;; (kit 1
-;;      (note 63 :default do-something)
-;;      (note 64 :default do-something-else))
-
-
 (defprotocol Note
-  (note-on [note event])
-  (note-off [note event]))
+  (note-on
+   [self midi-event]
+   ;; Returns the converted value to pass to the event handler, or nil to
+   ;; prevent the event handler from firing.
+   )
+  (note-off
+   [self midi-event]
+   ;; Returns the converted value to pass to the event handler, or nil to
+   ;; prevent the event handler from firing.
+   ))
 
 
-(defrecord DefaultNote [id event mute]
+(defrecord DefaultNote [id event max-val min-val]
+  Note
+  (note-on
+    ;; Return velocity scaled to range specified by :max-val
+    ;; and :min-val, set to the standard midi range 0-127 by default.
+    ;; A float unless both min- and max-val are integers.
+    [self midi-event]
+    (let [value (-> (- (:max-val self) (:min-val self))
+                    (/ 127.0)
+                    (* (:velocity midi-event))
+                    (+ min-val))]
+      (if (and (integer? (:max-val self))
+               (integer? (:min-val self)))
+        (int value)
+        value)))
+  (note-off [self midi-event]
+    (:min-val self)))
+
+
+(defn create-default-note [definition]
+  (map->DefaultNote
+   (merge {:max-val 127 :min-val 0} definition)))
+
+
+;; TODO HexNote
+(defrecord HexNote [id event max-val min-val]
   Note
   (note-on [self midi-event]
-    (:velocity midi-event))
+    ;; convert to hex
+    true
+    )
   (note-off [self midi-event]
-    0))
+    ;; min val or 0x00
+    false
+    ))
 
 
-(def note-constructors (atom {:default map->DefaultNote}))
+;; TODO OptionNote
+;; array of options
+;; min and max take index or value
+(defrecord OptionNote [id event max-val min-val options]
+  Note
+  (note-on [self midi-event]
+    ;; pick option
+    true
+    )
+  (note-off [self midi-event]
+    ;; min val or first
+    false
+    ))
 
 
-(defn note [id note-type event]
-  (if-let [constructor (@note-constructors note-type)]
-    (constructor {:id id
-                  :event event
-                  :mute  false})
+(defrecord BooleanNote [id event]
+  Note
+  (note-on [self midi-event]
+    true)
+  (note-off [self midi-event]
+    false))
+
+
+;; TODO register-note-type function for adding constructors
+(def note-constructors {
+                        :boolean map->BooleanNote
+                        :default create-default-note
+                        :hex     map->HexNote
+                        :option  map->OptionNote
+                        })
+
+
+(defn note
+  ([id note-type event] (note id note-type event {}))
+  ([id note-type event args]
+  (if-let [constructor (note-constructors note-type)]
+    (constructor (merge args {:id id
+                              :event event}))
     (throw (Exception.
-            (format "No constructor registered for '%s'" note-type)))))
+            (format "No constructor registered for '%s'" note-type))))))
 
 
 (defn kit [channel & notes]

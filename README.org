@@ -1,0 +1,41 @@
+* MIDI Map
+  A reasoned structure for mapping MIDI events to Clojure functions,
+  presumably to execute side effects.
+
+  *Very much a work in progress.*
+
+  #+BEGIN_SRC clojure
+  (require '[midimap.core :as m])
+
+  (def my-kit
+    (m/kit 1
+           (m/note 63 :default do-something)
+           (m/note 64 :boolean do-something-else)))
+
+  (def midi-event {:channel  1
+                   :command  :note-on
+                   :velocity 127
+                   :note     63})
+
+  (m/event midi-event my-kit)
+  #+END_SRC
+
+** Notes
+  Notes contain an id, event handler, and optional args. They also define a
+  protocol for processing a value for the event handler from note-on and
+  note-off events.
+
+*** Boolean
+
+*** Default
+
+*** Hex
+
+*** Option
+
+** Kits
+  Kits are channel-specific and may contain any number of notes.
+
+** Events
+  MIDI events are processed at the kit level, which delegates down to
+  matching channels and notes.

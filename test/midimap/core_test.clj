@@ -90,3 +90,14 @@
   (core/event (assoc dummy-event-1 :note 99)
               dummy-kit-1)
   (is (empty? @test-events)))
+
+
+(deftest default-note-uses-min-val
+  (is (= 0 (core/note-off (core/note 100 :default identity) {})))
+  (is (= 50 (core/note-off (core/note 100 :default identity {:min-val 50}) {}))))
+
+
+(deftest default-note-scales
+  (let [n (core/note 100 :default identity {:min-val 50 :max-val 100})]
+    (is (= 75 (int (core/note-on n {:velocity 64}))))
+    (is (= 100 (int (core/note-on n {:velocity 127}))))))
