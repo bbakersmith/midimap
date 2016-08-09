@@ -5,6 +5,10 @@
 (def test-events (atom []))
 
 
+(defn fire-test-event [x]
+  (swap! test-events conj x))
+
+
 (defn test-setup  []
   (reset! test-events []))
 
@@ -18,11 +22,11 @@
 
 
 (def dummy-note-1
-  (core/note 63 :default #(swap! test-events conj %)))
+  (core/note 63 :default #(fire-test-event %)))
 
 
 (def dummy-note-2
-  (core/note 64 :default #(swap! test-events conj (+ 1000 %))))
+  (core/note 64 :default #(fire-test-event (+ 1000 %))))
 
 
 (def dummy-kit-1
@@ -44,8 +48,7 @@
 
 
 (deftest create-default-note
-  (is (= 63 (:id dummy-note-1)))
-  (is (= false (:mute dummy-note-1))))
+  (is (= 63 (:id dummy-note-1))))
 
 
 (deftest create-kit
